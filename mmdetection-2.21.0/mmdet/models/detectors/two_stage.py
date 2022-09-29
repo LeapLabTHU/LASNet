@@ -62,12 +62,12 @@ class TwoStageDetector(BaseDetector):
         """bool: whether the detector has a RoI head"""
         return hasattr(self, 'roi_head') and self.roi_head is not None
 
-    def extract_feat(self, img):
+    def extract_feat(self, img, iter_now=0, len_loader=100):
         """Directly extract features from the backbone+neck."""
-        x = self.backbone(img)
+        x, others = self.backbone(img, iter_now, len_loader)
         if self.with_neck:
             x = self.neck(x)
-        return x
+        return x, others
 
     def forward_dummy(self, img):
         """Used for computing network flops.
@@ -92,6 +92,8 @@ class TwoStageDetector(BaseDetector):
                       img_metas,
                       gt_bboxes,
                       gt_labels,
+                      iter_now,
+                      len_loader,
                       gt_bboxes_ignore=None,
                       gt_masks=None,
                       proposals=None,
@@ -124,7 +126,9 @@ class TwoStageDetector(BaseDetector):
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
-        x = self.extract_feat(img)
+        x, others = self.extract_feat(img, iter_now=iter_now, len_loader=len_loader)
+        overall_sparse_flops, overall_dense_flops, target_sparsity_rate = others[3], others[4], others[5]
+        # print(img.shape, overall_sparse_flops, overall_dense_flops)
 
         losses = dict()
 
@@ -150,6 +154,10 @@ class TwoStageDetector(BaseDetector):
                                                  **kwargs)
         losses.update(roi_losses)
 
+        loss_sparse = (overall_sparse_flops/overall_dense_flops - target_sparsity_rate)**2
+        losses_sparse = {'loss_sparse': loss_sparse, 'flops_rate': (overall_sparse_flops/overall_dense_flops), 's_flops': overall_sparse_flops}
+        losses.update(losses_sparse)
+
         return losses
 
     async def async_simple_test(self,
@@ -170,18 +178,21 @@ class TwoStageDetector(BaseDetector):
         return await self.roi_head.async_simple_test(
             x, proposal_list, img_meta, rescale=rescale)
 
-    def simple_test(self, img, img_metas, proposals=None, rescale=False):
+    def simple_test(self, img, img_metas, get_info=False, proposals=None, rescale=False):
         """Test without augmentation."""
 
         assert self.with_bbox, 'Bbox head must be implemented.'
-        x = self.extract_feat(img)
+        # x = self.extract_feat(img)
+        x, others = self.extract_feat(img)
         if proposals is None:
             proposal_list = self.rpn_head.simple_test_rpn(x, img_metas)
         else:
             proposal_list = proposals
-
-        return self.roi_head.simple_test(
-            x, proposal_list, img_metas, rescale=rescale)
+        if get_info:
+            return self.roi_head.simple_test(x, proposal_list, img_metas, rescale=rescale), others
+        else:
+            return self.roi_head.simple_test(
+                x, proposal_list, img_metas, rescale=rescale)
 
     def aug_test(self, imgs, img_metas, rescale=False):
         """Test with augmentations.

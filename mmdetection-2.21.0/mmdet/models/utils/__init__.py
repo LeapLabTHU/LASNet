@@ -11,14 +11,14 @@ from .misc import interpolate_as, sigmoid_geometric_mean
 from .normed_predictor import NormedConv2d, NormedLinear
 from .positional_encoding import (LearnedPositionalEncoding,
                                   SinePositionalEncoding)
-from .res_layer import ResLayer, SimplifiedBasicBlock
+from .res_layer import ResLayer, ResLayer_sd, SimplifiedBasicBlock
 from .se_layer import SELayer
 from .transformer import (DetrTransformerDecoder, DetrTransformerDecoderLayer,
                           DynamicConv, PatchEmbed, Transformer, nchw_to_nlc,
                           nlc_to_nchw)
 
 __all__ = [
-    'ResLayer', 'gaussian_radius', 'gen_gaussian_target',
+    'ResLayer', 'ResLayer_sd', 'gaussian_radius', 'gen_gaussian_target',
     'DetrTransformerDecoderLayer', 'DetrTransformerDecoder', 'Transformer',
     'build_transformer', 'build_linear_layer', 'SinePositionalEncoding',
     'LearnedPositionalEncoding', 'DynamicConv', 'SimplifiedBasicBlock',

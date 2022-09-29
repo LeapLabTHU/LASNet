@@ -117,8 +117,11 @@ data
 docs/modelzoo_statistics.md
 mmdet/.mim
 work_dirs/
+checkpoints/imagenet_pretrain
 
 # Pytorch
 *.pth
 *.py~
 *.sh~
+
+*.pth.tar
